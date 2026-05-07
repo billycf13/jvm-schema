@@ -538,11 +538,13 @@ class JVM_Schema_Settings {
   <p>Your Answer...</p>
 </div>' ) . '</code></pre>';
             echo '<p><strong>' . esc_html__( '2. Question headings (auto-detect):', 'jvm-schema' ) . '</strong><br>';
-            echo esc_html__( 'Any heading (h1-h6) ending with "?" will be treated as a question, content after it as the answer.', 'jvm-schema' ) . '</p>';
+            echo esc_html__( 'Any heading (h1-h6) ending with "?" or starting with interrogative words (apa, bagaimana, berapa, etc.) will be treated as a question.', 'jvm-schema' ) . '</p>';
             echo '<p><strong>' . esc_html__( '3. Accordion pattern (auto-detect):', 'jvm-schema' ) . '</strong><br>';
             echo esc_html__( 'HTML <details>/<summary> elements are automatically detected.', 'jvm-schema' ) . '</p>';
+            echo '<p><strong>' . esc_html__( '4. Inline list Q&A (auto-detect):', 'jvm-schema' ) . '</strong><br>';
+            echo esc_html__( 'List items (<li>) containing a question followed by <br> and an answer, or <strong>Question?</strong> followed by answer text.', 'jvm-schema' ) . '</p>';
             echo '<hr style="margin:12px 0;">';
-            echo '<p class="description">' . esc_html__( 'Content sources: post/page content, and WooCommerce product custom tabs.', 'jvm-schema' ) . '</p>';
+            echo '<p class="description">' . esc_html__( 'Content sources: post/page content, and WooCommerce product custom tabs (_custom_product_tabs).', 'jvm-schema' ) . '</p>';
             echo '</div>';
         }, $page, $section );
     }

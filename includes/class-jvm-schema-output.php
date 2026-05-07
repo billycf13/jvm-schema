@@ -88,7 +88,8 @@ class JVM_Schema_Output {
         if ( ! $json ) {
             return;
         }
-        echo "\n<!-- JVM Schema -->\n";
+        $type = isset( $schema['@type'] ) ? $schema['@type'] : 'Unknown';
+        echo "\n<!-- JVM Schema: " . esc_html( $type ) . " -->\n";
         echo '<script type="application/ld+json">' . "\n";
         echo $json . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo '</script>' . "\n";
