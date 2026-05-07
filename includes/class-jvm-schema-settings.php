@@ -522,18 +522,28 @@ class JVM_Schema_Settings {
         $page = 'jvm-schema-faq';
         $section = 'jvm_schema_faq_section';
 
-        add_settings_section( $section, __( 'FAQ Auto-Detection Settings', 'jvm-schema' ), '__return_false', $page );
+        add_settings_section( $section, __( 'FAQ Schema Settings', 'jvm-schema' ), '__return_false', $page );
 
         register_setting( $page, 'jvm_schema_enable_faq', array( 'type' => 'string', 'sanitize_callback' => array( $this, 'sanitize_checkbox' ), 'default' => '1' ) );
-        add_settings_field( 'jvm_schema_enable_faq', __( 'Enable FAQ Auto-Detection', 'jvm-schema' ), array( $this, 'render_toggle' ), $page, $section, array( 'label_for' => 'jvm_schema_enable_faq', 'option' => 'jvm_schema_enable_faq' ) );
+        add_settings_field( 'jvm_schema_enable_faq', __( 'Enable FAQ Schema', 'jvm-schema' ), array( $this, 'render_toggle' ), $page, $section, array( 'label_for' => 'jvm_schema_enable_faq', 'option' => 'jvm_schema_enable_faq' ) );
 
-        add_settings_field( 'jvm_schema_faq_info', __( 'Instructions', 'jvm-schema' ), function() {
-            echo '<p>' . esc_html__( 'To auto-detect FAQs, wrap your Q&A section in the editor with a div like this:', 'jvm-schema' ) . '</p>';
-            echo '<pre style="background:#eee;padding:10px;"><code>' . esc_html( '<div class="jvm-faq">
+        register_setting( $page, 'jvm_schema_faq_autodetect', array( 'type' => 'string', 'sanitize_callback' => array( $this, 'sanitize_checkbox' ), 'default' => '1' ) );
+        add_settings_field( 'jvm_schema_faq_autodetect', __( 'Enable Auto-Detection', 'jvm-schema' ), array( $this, 'render_toggle' ), $page, $section, array( 'label_for' => 'jvm_schema_faq_autodetect', 'option' => 'jvm_schema_faq_autodetect' ) );
+
+        add_settings_field( 'jvm_schema_faq_info', __( 'Detection Methods', 'jvm-schema' ), function() {
+            echo '<div style="line-height:1.8;">';
+            echo '<p><strong>' . esc_html__( '1. Explicit wrapper (always active):', 'jvm-schema' ) . '</strong></p>';
+            echo '<pre style="background:#eee;padding:10px;margin:5px 0 15px;"><code>' . esc_html( '<div class="jvm-faq">
   <h3>Your Question?</h3>
   <p>Your Answer...</p>
 </div>' ) . '</code></pre>';
-            echo '<p class="description">' . esc_html__( 'Headings (h1-h6) will be questions, and following content will be answers.', 'jvm-schema' ) . '</p>';
+            echo '<p><strong>' . esc_html__( '2. Question headings (auto-detect):', 'jvm-schema' ) . '</strong><br>';
+            echo esc_html__( 'Any heading (h1-h6) ending with "?" will be treated as a question, content after it as the answer.', 'jvm-schema' ) . '</p>';
+            echo '<p><strong>' . esc_html__( '3. Accordion pattern (auto-detect):', 'jvm-schema' ) . '</strong><br>';
+            echo esc_html__( 'HTML <details>/<summary> elements are automatically detected.', 'jvm-schema' ) . '</p>';
+            echo '<hr style="margin:12px 0;">';
+            echo '<p class="description">' . esc_html__( 'Content sources: post/page content, and WooCommerce product custom tabs.', 'jvm-schema' ) . '</p>';
+            echo '</div>';
         }, $page, $section );
     }
 

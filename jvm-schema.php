@@ -111,6 +111,7 @@ function jvm_schema_activate() {
         'jvm_schema_article_default_type'  => 'BlogPosting',
         'jvm_schema_article_disable_webpage' => '1',
         'jvm_schema_enable_faq'            => '1',
+        'jvm_schema_faq_autodetect'        => '1',
     );
 
     foreach ( $defaults as $option => $value ) {
