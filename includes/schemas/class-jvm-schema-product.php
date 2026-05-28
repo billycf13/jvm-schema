@@ -76,6 +76,18 @@ class JVM_Schema_Product {
             );
         }
 
+        // GTIN.
+        $gtin = get_post_meta( $product_id, '_jvm_schema_product_gtin', true );
+        if ( ! empty( $gtin ) ) {
+            $schema['gtin'] = $gtin;
+        }
+
+        // MPN.
+        $mpn = get_post_meta( $product_id, '_jvm_schema_product_mpn', true );
+        if ( ! empty( $mpn ) ) {
+            $schema['mpn'] = $mpn;
+        }
+
         // Aggregate Rating.
         $schema['aggregateRating'] = $this->get_aggregate_rating( $product );
 
@@ -85,16 +97,17 @@ class JVM_Schema_Product {
             $condition = 'NewCondition';
         }
 
-        // Offers.
-        $schema['offers'] = $this->get_offers( $product, $condition, $site_url );
-
-        // Seller linkage.
+        // Seller reference.
+        $seller = null;
         $org_name = get_option( 'jvm_schema_org_name', '' );
         if ( ! empty( $org_name ) || get_option( 'jvm_schema_business_type', '' ) ) {
-            $schema['offers']['seller'] = array(
+            $seller = array(
                 '@id' => trailingslashit( $site_url ) . '#organization',
             );
         }
+
+        // Offers.
+        $schema['offers'] = $this->get_offers( $product, $condition, $seller );
 
         return $schema;
     }
@@ -135,35 +148,96 @@ class JVM_Schema_Product {
     }
 
     /**
+     * Get priceValidUntil date string.
+     */
+    private function get_price_valid_until( $product_id ) {
+        $override = get_post_meta( $product_id, '_jvm_schema_product_price_valid_until', true );
+        if ( ! empty( $override ) ) {
+            return $override;
+        }
+
+        $days = absint( get_option( 'jvm_schema_product_price_valid_days', 365 ) );
+        if ( $days < 1 ) {
+            $days = 365;
+        }
+
+        return gmdate( 'Y-m-d', strtotime( "+{$days} days" ) );
+    }
+
+    /**
+     * Build a single Offer array.
+     */
+    private function build_offer( $price, $url, $condition, $seller, $price_valid_until, $sku = '' ) {
+        $offer = array(
+            '@type'         => 'Offer',
+            'url'           => $url,
+            'priceCurrency' => get_woocommerce_currency(),
+            'availability'  => 'https://schema.org/InStock',
+            'itemCondition' => 'https://schema.org/' . $condition,
+        );
+
+        if ( '' !== $price && null !== $price ) {
+            $offer['price'] = $price;
+        }
+
+        if ( ! empty( $price_valid_until ) ) {
+            $offer['priceValidUntil'] = $price_valid_until;
+        }
+
+        if ( ! empty( $sku ) ) {
+            $offer['sku'] = $sku;
+        }
+
+        if ( $seller ) {
+            $offer['seller'] = $seller;
+        }
+
+        return $offer;
+    }
+
+    /**
      * Get offers data for simple and variable products.
      */
-    private function get_offers( $product, $condition, $site_url ) {
+    private function get_offers( $product, $condition, $seller ) {
+        $product_id       = $product->get_id();
+        $url              = get_permalink( $product_id );
+        $price_valid_until = $this->get_price_valid_until( $product_id );
+
         if ( $product->is_type( 'variable' ) ) {
-            $offers = array();
+            $offers     = array();
             $variations = $product->get_available_variations( 'objects' );
-            
+
             foreach ( $variations as $variation ) {
-                $offers[] = array(
-                    '@type'         => 'Offer',
-                    'url'           => get_permalink( $product->get_id() ),
-                    'priceCurrency' => get_woocommerce_currency(),
-                    'price'         => $variation->get_price(),
-                    'availability'  => $variation->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-                    'itemCondition' => 'https://schema.org/' . $condition,
-                    'sku'           => $variation->get_sku(),
+                $offer = $this->build_offer(
+                    $variation->get_price(),
+                    $url,
+                    $condition,
+                    $seller,
+                    $price_valid_until,
+                    $variation->get_sku()
                 );
+                $offer['availability'] = $variation->is_in_stock()
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/OutOfStock';
+
+                $offers[] = $offer;
             }
+
             return $offers;
         }
 
         // Simple product.
-        return array(
-            '@type'         => 'Offer',
-            'url'           => get_permalink( $product->get_id() ),
-            'priceCurrency' => get_woocommerce_currency(),
-            'price'         => $product->get_price(),
-            'availability'  => $product->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-            'itemCondition' => 'https://schema.org/' . $condition,
+        $offer = $this->build_offer(
+            $product->get_price(),
+            $url,
+            $condition,
+            $seller,
+            $price_valid_until
         );
+        $offer['availability'] = $product->is_in_stock()
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock';
+
+        return $offer;
     }
 }

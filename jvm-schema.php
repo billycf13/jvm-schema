@@ -107,6 +107,7 @@ function jvm_schema_activate() {
         'jvm_schema_product_default_rating' => '5',
         'jvm_schema_product_default_review_count' => '10',
         'jvm_schema_product_default_brand' => '',
+        'jvm_schema_product_price_valid_days' => 365,
         'jvm_schema_enable_article'        => '1',
         'jvm_schema_article_default_type'  => 'BlogPosting',
         'jvm_schema_article_disable_webpage' => '1',

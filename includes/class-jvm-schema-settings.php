@@ -492,6 +492,9 @@ class JVM_Schema_Settings {
 
         register_setting( $page, 'jvm_schema_product_default_brand', array( 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ) );
         add_settings_field( 'jvm_schema_product_default_brand', __( 'Default Brand', 'jvm-schema' ), array( $this, 'render_text' ), $page, $section, array( 'label_for' => 'jvm_schema_product_default_brand', 'option' => 'jvm_schema_product_default_brand', 'placeholder' => 'My Brand' ) );
+
+        register_setting( $page, 'jvm_schema_product_price_valid_days', array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 365 ) );
+        add_settings_field( 'jvm_schema_product_price_valid_days', __( 'Price Valid Until (days from today)', 'jvm-schema' ), array( $this, 'render_number' ), $page, $section, array( 'label_for' => 'jvm_schema_product_price_valid_days', 'option' => 'jvm_schema_product_price_valid_days' ) );
     }
 
     /* --- Article -------------------------------- */
@@ -642,6 +645,14 @@ class JVM_Schema_Settings {
             echo '<option value="' . esc_attr( $val ) . '" ' . selected( $condition, $val, false ) . '>' . esc_html( $label ) . '</option>';
         }
         echo '</select></td></tr>';
+
+        $gtin             = get_post_meta( $post->ID, '_jvm_schema_product_gtin', true );
+        $mpn              = get_post_meta( $post->ID, '_jvm_schema_product_mpn', true );
+        $price_valid_until = get_post_meta( $post->ID, '_jvm_schema_product_price_valid_until', true );
+
+        echo '<tr><th>' . esc_html__( 'GTIN', 'jvm-schema' ) . '</th><td><input type="text" name="_jvm_schema_product_gtin" value="' . esc_attr( $gtin ) . '" class="regular-text" placeholder="8/12/13/14 digit" /></td></tr>';
+        echo '<tr><th>' . esc_html__( 'MPN', 'jvm-schema' ) . '</th><td><input type="text" name="_jvm_schema_product_mpn" value="' . esc_attr( $mpn ) . '" class="regular-text" /></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Price Valid Until', 'jvm-schema' ) . '</th><td><input type="date" name="_jvm_schema_product_price_valid_until" value="' . esc_attr( $price_valid_until ) . '" /><p class="description">' . esc_html__( 'Override global setting. Leave empty to use default.', 'jvm-schema' ) . '</p></td></tr>';
         echo '</table>';
     }
 
@@ -650,7 +661,7 @@ class JVM_Schema_Settings {
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
 
-        $fields = array( '_jvm_schema_product_rating', '_jvm_schema_product_review_count', '_jvm_schema_product_brand', '_jvm_schema_product_condition' );
+        $fields = array( '_jvm_schema_product_rating', '_jvm_schema_product_review_count', '_jvm_schema_product_brand', '_jvm_schema_product_condition', '_jvm_schema_product_gtin', '_jvm_schema_product_mpn', '_jvm_schema_product_price_valid_until' );
         foreach ( $fields as $field ) {
             if ( isset( $_POST[ $field ] ) ) {
                 update_post_meta( $post_id, $field, sanitize_text_field( $_POST[ $field ] ) );
