@@ -107,7 +107,10 @@ class JVM_Schema_Product {
         }
 
         // Offers.
-        $schema['offers'] = $this->get_offers( $product, $condition, $seller );
+        $offers = $this->get_offers( $product, $condition, $seller );
+        if ( $offers ) {
+            $schema['offers'] = $offers;
+        }
 
         return $schema;
     }
@@ -208,8 +211,13 @@ class JVM_Schema_Product {
             $variations = $product->get_available_variations( 'objects' );
 
             foreach ( $variations as $variation ) {
+                $price = $variation->get_price();
+                if ( '' === $price || null === $price ) {
+                    continue;
+                }
+
                 $offer = $this->build_offer(
-                    $variation->get_price(),
+                    $price,
                     $url,
                     $condition,
                     $seller,
@@ -223,12 +231,17 @@ class JVM_Schema_Product {
                 $offers[] = $offer;
             }
 
-            return $offers;
+            return ! empty( $offers ) ? $offers : null;
         }
 
         // Simple product.
+        $price = $product->get_price();
+        if ( '' === $price || null === $price ) {
+            return null;
+        }
+
         $offer = $this->build_offer(
-            $product->get_price(),
+            $price,
             $url,
             $condition,
             $seller,
