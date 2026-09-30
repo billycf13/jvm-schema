@@ -19,6 +19,7 @@ jvm-schema/
 ├── jvm-schema.php                     # Main bootstrap file: definisi konstanta, activation hook, inisialisasi awal
 ├── README.md                          # Dokumentasi user & fitur publik
 ├── AGENTS.md                          # Dokumentasi arsitektur untuk AI & developer
+├── plugin-update-checker/             # Library auto-update dari GitHub repo (branch main)
 ├── admin/
 │   └── views/
 │       └── settings-page.php          # Template view form pengaturan admin

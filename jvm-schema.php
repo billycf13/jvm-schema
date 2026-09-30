@@ -3,7 +3,7 @@
  * Plugin Name: JVM Schema
  * Plugin URI:  https://example.com/jvm-schema
  * Description: Dynamic structured data / JSON-LD schema manager for WordPress & WooCommerce
- * Version:     1.0.0
+ * Version:     1.1.0
  * Author:      JVM
  * Author URI:  https://example.com
  * License:     GPL-2.0+
@@ -22,11 +22,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin constants.
  */
-define( 'JVM_SCHEMA_VERSION', '1.0.0' );
+define( 'JVM_SCHEMA_VERSION', '1.1.0' );
 define( 'JVM_SCHEMA_FILE', __FILE__ );
 define( 'JVM_SCHEMA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JVM_SCHEMA_URL', plugin_dir_url( __FILE__ ) );
 define( 'JVM_SCHEMA_BASENAME', plugin_basename( __FILE__ ) );
+
+/**
+ * Initialize Plugin Update Checker.
+ */
+require_once JVM_SCHEMA_DIR . 'plugin-update-checker/plugin-update-checker.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$jvm_schema_updater = PucFactory::buildUpdateChecker(
+    'https://github.com/billycf13/jvm-schema/',
+    __FILE__,
+    'jvm-schema'
+);
+$jvm_schema_updater->setBranch( 'main' );
 
 /**
  * Load plugin classes.
