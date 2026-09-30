@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: JVM Schema
- * Plugin URI:  https://example.com/jvm-schema
+ * Plugin URI:  https://github.com/billycf13/jvm-schema
  * Description: Dynamic structured data / JSON-LD schema manager for WordPress & WooCommerce
- * Version:     1.1.0
+ * Version:     1.1.1
  * Author:      JVM
- * Author URI:  https://example.com
+ * Author URI:  https://github.com/billycf13
  * License:     GPL-2.0+
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: jvm-schema
