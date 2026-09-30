@@ -84,18 +84,54 @@ class JVM_Schema_FAQ {
         $parts = array( $post->post_content );
 
         // WooCommerce product: include custom tab contents.
-        if ( function_exists( 'is_product' ) && is_product() ) {
+        $is_wc_product = ( function_exists( 'is_product' ) && is_product() ) || ( isset( $post->post_type ) && 'product' === $post->post_type );
+
+        if ( $is_wc_product ) {
             $custom_tabs = get_post_meta( $post->ID, '_custom_product_tabs', true );
             if ( is_array( $custom_tabs ) ) {
                 foreach ( $custom_tabs as $tab ) {
-                    if ( ! empty( $tab['content'] ) ) {
-                        $parts[] = $tab['content'];
+                    if ( empty( $tab['content'] ) ) {
+                        continue;
+                    }
+
+                    $title   = isset( $tab['title'] ) ? $tab['title'] : '';
+                    $content = $tab['content'];
+
+                    if ( function_exists( 'do_shortcode' ) ) {
+                        $content = do_shortcode( $content );
+                    }
+                    if ( function_exists( 'wpautop' ) ) {
+                        $content = wpautop( $content );
+                    }
+
+                    // If tab title clearly indicates FAQ, wrap in explicit jvm-faq wrapper to ensure extraction.
+                    if ( $this->is_faq_tab_title( $title ) ) {
+                        $parts[] = '<div class="jvm-faq">' . $content . '</div>';
+                    } else {
+                        $parts[] = "\n\n" . $content . "\n\n";
                     }
                 }
             }
         }
 
-        return implode( "\n", array_filter( $parts ) );
+        return implode( "\n\n", array_filter( $parts ) );
+    }
+
+    /**
+     * Check if a custom tab title indicates FAQ content.
+     *
+     * @param string $title Tab title.
+     * @return bool
+     */
+    private function is_faq_tab_title( $title ) {
+        if ( empty( trim( $title ) ) ) {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/\b(faq|faqs|q&a|qna|tanya\s*jawab|pertanyaan|frequently\s+asked\s+questions)\b/iu',
+            $title
+        );
     }
 
     /* ──────────────────────────────────────────────

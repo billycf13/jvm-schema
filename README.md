@@ -19,7 +19,7 @@
   - **WebPage**: Enriches standard pages with technical metadata.
   - **Breadcrumbs**: Clean, hierarchical breadcrumb navigation schema.
   - **Articles**: Enhanced schema for Blog Postings.
-  - **FAQ**: Structured data for FAQ sections to trigger rich snippets.
+  - **FAQ (Smart Auto-Detection)**: Automatically detects FAQs from post content and WooCommerce custom tabs (`_custom_product_tabs`), supporting explicit wrappers, heading questions (`h1`-`h6`), `<details>`/`<summary>`, and list items (`<li>`).
 - **Dynamic Configuration**: Easy-to-use settings dashboard for global configurations.
 - **Lightweight & Efficient**: Zero bloat, focused purely on high-quality JSON-LD output.
 
