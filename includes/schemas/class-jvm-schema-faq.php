@@ -4,13 +4,16 @@
  *
  * Detection strategies (in order):
  *   1. Explicit  <div class="jvm-faq"> wrappers
+ *      (handles: headings h1-h6, <li> inline Q&A, <p><strong>Q</strong><br>A</p>)
  *   2. Headings (h1-h6) with question-like text, followed by content
  *   3. <details>/<summary> accordion pattern
  *   4. Inline Q&A in list items (<li>) — via DOMDocument
+ *   5. Inline Q&A in paragraph (<p><strong>Q</strong><br>A</p>) — via DOMDocument
  *
  * Content sources:
  *   - Article / blog post: post_content
- *   - WooCommerce product: post_content + custom tab contents (_custom_product_tabs)
+ *   - WooCommerce product: post_content + custom tab contents
+ *     (_custom_product_tabs, yikes_woo_products_tabs)
  *
  * @package JVM_Schema
  */
@@ -87,34 +90,63 @@ class JVM_Schema_FAQ {
         $is_wc_product = ( function_exists( 'is_product' ) && is_product() ) || ( isset( $post->post_type ) && 'product' === $post->post_type );
 
         if ( $is_wc_product ) {
+            // Source 1: Generic custom tabs plugin (_custom_product_tabs).
             $custom_tabs = get_post_meta( $post->ID, '_custom_product_tabs', true );
             if ( is_array( $custom_tabs ) ) {
-                foreach ( $custom_tabs as $tab ) {
-                    if ( empty( $tab['content'] ) ) {
-                        continue;
-                    }
+                $parts = array_merge( $parts, $this->process_tab_list( $custom_tabs ) );
+            }
 
-                    $title   = isset( $tab['title'] ) ? $tab['title'] : '';
-                    $content = $tab['content'];
-
-                    if ( function_exists( 'do_shortcode' ) ) {
-                        $content = do_shortcode( $content );
-                    }
-                    if ( function_exists( 'wpautop' ) ) {
-                        $content = wpautop( $content );
-                    }
-
-                    // If tab title clearly indicates FAQ, wrap in explicit jvm-faq wrapper to ensure extraction.
-                    if ( $this->is_faq_tab_title( $title ) ) {
-                        $parts[] = '<div class="jvm-faq">' . $content . '</div>';
-                    } else {
-                        $parts[] = "\n\n" . $content . "\n\n";
-                    }
-                }
+            // Source 2: Yikes "Custom Product Tabs for WooCommerce" plugin (yikes_woo_products_tabs).
+            $yikes_tabs = get_post_meta( $post->ID, 'yikes_woo_products_tabs', true );
+            if ( is_array( $yikes_tabs ) ) {
+                $parts = array_merge( $parts, $this->process_tab_list( $yikes_tabs ) );
             }
         }
 
         return implode( "\n\n", array_filter( $parts ) );
+    }
+
+    /**
+     * Process a list of custom tabs and return content parts.
+     *
+     * Each tab array must have:
+     *   - 'title'   (string) Tab label — used to detect if it's an FAQ tab.
+     *   - 'content' (string) Raw HTML/text content of the tab.
+     *
+     * Compatible with:
+     *   - Generic plugin meta key: _custom_product_tabs
+     *   - Yikes plugin meta key  : yikes_woo_products_tabs (also has 'id' key, ignored here)
+     *
+     * @param array $tabs Array of tab data arrays.
+     * @return array Processed HTML content parts.
+     */
+    private function process_tab_list( $tabs ) {
+        $parts = array();
+
+        foreach ( $tabs as $tab ) {
+            if ( empty( $tab['content'] ) ) {
+                continue;
+            }
+
+            $title   = isset( $tab['title'] ) ? $tab['title'] : '';
+            $content = $tab['content'];
+
+            if ( function_exists( 'do_shortcode' ) ) {
+                $content = do_shortcode( $content );
+            }
+            if ( function_exists( 'wpautop' ) ) {
+                $content = wpautop( $content );
+            }
+
+            // If tab title clearly indicates FAQ, wrap in explicit jvm-faq wrapper to ensure extraction.
+            if ( $this->is_faq_tab_title( $title ) ) {
+                $parts[] = '<div class="jvm-faq">' . $content . '</div>';
+            } else {
+                $parts[] = "\n\n" . $content . "\n\n";
+            }
+        }
+
+        return $parts;
     }
 
     /**
@@ -148,13 +180,15 @@ class JVM_Schema_FAQ {
         $faqs = array();
 
         // 1. Explicit <div class="jvm-faq"> wrappers (always active).
+        //    Handles: headings, <li> inline Q&A, and <p><strong>Q</strong><br>A</p> inside wrapper.
         $faqs = array_merge( $faqs, $this->extract_from_jvm_faq_wrapper( $content ) );
 
-        // 2-4. Auto-detect strategies.
+        // 2-5. Auto-detect strategies.
         if ( '1' === get_option( 'jvm_schema_faq_autodetect', '1' ) ) {
             $faqs = array_merge( $faqs, $this->extract_from_question_headings( $content ) );
             $faqs = array_merge( $faqs, $this->extract_from_details_elements( $content ) );
             $faqs = array_merge( $faqs, $this->extract_from_list_items( $content ) );
+            $faqs = array_merge( $faqs, $this->extract_from_paragraph_items( $content ) );
         }
 
         return $this->deduplicate( $faqs );
@@ -173,7 +207,14 @@ class JVM_Schema_FAQ {
 
         if ( preg_match_all( '/<div[^>]*class="[^"]*jvm-faq[^"]*"[^>]*>(.*?)<\/div>/is', $content, $matches ) ) {
             foreach ( $matches[1] as $inner ) {
+                // Parse heading → answer pairs (h1-h6 as questions).
                 $faqs = array_merge( $faqs, $this->parse_heading_answer_pairs( $inner ) );
+
+                // Also parse <li> inline Q&A inside the wrapper (e.g. <ol>/<ul> with <strong>Q<br>A).
+                $faqs = array_merge( $faqs, $this->parse_inline_items( $inner, 'li' ) );
+
+                // Also parse <p> inline Q&A inside the wrapper (e.g. <p><strong>Q</strong><br>A</p>).
+                $faqs = array_merge( $faqs, $this->parse_inline_items( $inner, 'p' ) );
             }
         }
 
@@ -244,8 +285,9 @@ class JVM_Schema_FAQ {
     /* ──────────────────────────────────────────────
      *  Strategy 4: Inline Q&A in <li> elements
      *  Handles:
+     *    <li><strong>Q?</strong><br>A</li>
      *    <li><p><strong>Q?</strong><br>A</p></li>
-     *    <li><p>Q?<br>A</p></li>
+     *    <li>Q?<br>A</li>
      * ────────────────────────────────────────────── */
 
     /**
@@ -257,20 +299,64 @@ class JVM_Schema_FAQ {
             return array();
         }
 
-        if ( class_exists( 'DOMDocument' ) ) {
-            return $this->extract_list_items_dom( $content );
-        }
-
-        return $this->extract_list_items_regex( $content );
+        return $this->parse_inline_items( $content, 'li' );
     }
 
-    /**
-     * DOMDocument-based list item extraction (preferred).
+    /* ──────────────────────────────────────────────
+     *  Strategy 5: Inline Q&A in <p> elements
+     *  Handles:
+     *    <p><strong>Q?</strong><br>A</p>
+     *    <p>Q?<br>A</p>
      *
+     *  Guards (prevent false positives):
+     *    - <p> must contain <strong> AND <br> before processing
+     *    - parse_inline_qa() validates is_question_like() + answer length > 10
+     * ────────────────────────────────────────────── */
+
+    /**
      * @param string $content HTML content.
      * @return array
      */
-    private function extract_list_items_dom( $content ) {
+    private function extract_from_paragraph_items( $content ) {
+        // Quick guard: skip entirely if no <strong> + <br> combo present.
+        if ( stripos( $content, '<strong' ) === false || stripos( $content, '<br' ) === false ) {
+            return array();
+        }
+
+        return $this->parse_inline_items( $content, 'p' );
+    }
+
+    /* ──────────────────────────────────────────────
+     *  Shared inline item parser (Strategy 4 & 5)
+     * ────────────────────────────────────────────── */
+
+    /**
+     * Extract inline Q&A pairs from a given tag type using DOMDocument or regex fallback.
+     *
+     * Supports tag: 'li' (Strategy 4) and 'p' (Strategy 5).
+     * For 'p' tags, applies an additional pre-filter: only processes <p> elements
+     * that contain both <strong> and <br> to avoid false positives.
+     *
+     * @param string $content HTML content.
+     * @param string $tag     HTML tag name to scan ('li' or 'p').
+     * @return array
+     */
+    private function parse_inline_items( $content, $tag ) {
+        if ( class_exists( 'DOMDocument' ) ) {
+            return $this->parse_inline_items_dom( $content, $tag );
+        }
+
+        return $this->parse_inline_items_regex( $content, $tag );
+    }
+
+    /**
+     * DOMDocument-based inline item extraction (preferred).
+     *
+     * @param string $content HTML content.
+     * @param string $tag     HTML tag name.
+     * @return array
+     */
+    private function parse_inline_items_dom( $content, $tag ) {
         libxml_use_internal_errors( true );
 
         $dom = new DOMDocument( '1.0', 'UTF-8' );
@@ -282,12 +368,19 @@ class JVM_Schema_FAQ {
         libxml_clear_errors();
 
         $faqs  = array();
-        $items = $dom->getElementsByTagName( 'li' );
+        $items = $dom->getElementsByTagName( $tag );
 
-        foreach ( $items as $li ) {
+        foreach ( $items as $node ) {
             $inner_html = '';
-            foreach ( $li->childNodes as $child ) {
+            foreach ( $node->childNodes as $child ) {
                 $inner_html .= $dom->saveHTML( $child );
+            }
+
+            // For <p> tags: pre-filter — must have <strong> and <br> to avoid false positives.
+            if ( 'p' === $tag ) {
+                if ( stripos( $inner_html, '<strong' ) === false || stripos( $inner_html, '<br' ) === false ) {
+                    continue;
+                }
             }
 
             $faq = $this->parse_inline_qa( $inner_html );
@@ -300,16 +393,24 @@ class JVM_Schema_FAQ {
     }
 
     /**
-     * Regex fallback for list item extraction (when DOMDocument unavailable).
+     * Regex fallback for inline item extraction (when DOMDocument unavailable).
      *
      * @param string $content HTML content.
+     * @param string $tag     HTML tag name.
      * @return array
      */
-    private function extract_list_items_regex( $content ) {
+    private function parse_inline_items_regex( $content, $tag ) {
         $faqs = array();
 
-        if ( preg_match_all( '/<li[^>]*>(.*?)<\/li>/is', $content, $matches ) ) {
+        if ( preg_match_all( '/<' . $tag . '[^>]*>(.*?)<\/' . $tag . '>/is', $content, $matches ) ) {
             foreach ( $matches[1] as $inner ) {
+                // For <p> tags: pre-filter — must have <strong> and <br>.
+                if ( 'p' === $tag ) {
+                    if ( stripos( $inner, '<strong' ) === false || stripos( $inner, '<br' ) === false ) {
+                        continue;
+                    }
+                }
+
                 $faq = $this->parse_inline_qa( $inner );
                 if ( $faq ) {
                     $faqs[] = $faq;

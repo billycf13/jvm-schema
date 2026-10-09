@@ -3,7 +3,7 @@
  * Plugin Name: JVM Schema
  * Plugin URI:  https://github.com/billycf13/jvm-schema
  * Description: Dynamic structured data / JSON-LD schema manager for WordPress & WooCommerce
- * Version:     1.1.1
+ * Version:     1.1.2
  * Author:      JVM
  * Author URI:  https://github.com/billycf13
  * License:     GPL-2.0+
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin constants.
  */
-define( 'JVM_SCHEMA_VERSION', '1.1.0' );
+define( 'JVM_SCHEMA_VERSION', '1.1.2' );
 define( 'JVM_SCHEMA_FILE', __FILE__ );
 define( 'JVM_SCHEMA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JVM_SCHEMA_URL', plugin_dir_url( __FILE__ ) );
